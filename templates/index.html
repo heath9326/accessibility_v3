@@ -1,0 +1,16 @@
+<!-- todo_list/todo_app/templates/todo_app/index.html -->
+
+{% extends "base.html" %}
+ {% block title %}
+     <div style="text-align: center"> Input your text for analysis:</div>
+ {% endblock %}
+
+{% block content %}
+    <div margin="auto">
+        <form action = "" method = "post">
+            <input type="text" name="Input your text here">
+            <input type="submit" value=Submit>
+        </form>
+    </div>
+
+{% endblock %}
