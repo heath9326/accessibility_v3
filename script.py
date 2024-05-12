@@ -5,8 +5,7 @@ from pathlib import Path
 import zipfile
 from assessement.models import InitialText, AssessmentTextModel
 from spacy.tokens import Doc, Token
-from ruwordnet import RuWordNet
-from nltk.corpus import wordnet as wn1
+
 from ufal.udpipe import Model, Pipeline
 import os
 import sys
@@ -211,13 +210,13 @@ def num_replace():
 def tag_ud(words: list[str], modelfile='udpipe_syntagrus.model'):
     udpipe_model_url = 'https://rusvectores.org/static/models/udpipe_syntagrus.model'
     udpipe_filename = udpipe_model_url.split('/')[-1]
-
-    if not os.path.isfile(modelfile):
+    filepath = r'C:\Users\Евгения\PycharmProjects\models\udpipe_syntagrus.model'
+    if not os.path.isfile(filepath):
         print('UDPipe model not found. Downloading...', file=sys.stderr)
         wget.download(udpipe_model_url)
 
     print('\nLoading the model...', file=sys.stderr)
-    model = Model.load(modelfile)
+    model = Model.load(filepath)
     process_pipeline = Pipeline(model, 'tokenize', Pipeline.DEFAULT, Pipeline.DEFAULT, 'conllu')
 
     print('Processing input...', file=sys.stderr)
