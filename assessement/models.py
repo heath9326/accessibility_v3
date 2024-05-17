@@ -1,29 +1,34 @@
-from typing import Optional, Any
+from typing import Any
+
 from spacy.lang.ru import Russian
-from pydantic import BaseModel
-import spacy
 from spacy.tokens import Doc, Token
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
+
+from . import Base
 nlp = Russian()
 
 
-class InitialText(BaseModel):
-    text: str
+class InitialText(Base):
+    __tablename__ = "initial_text"
+
+    id = Column(Integer, primary_key=True)
+    text = Column(String, unique=False, index=True)
+
+    # items = relationship("Item", back_populates="owner")
 
 
-class TokenField(BaseModel):
-    token: Token
-    syllables_count: int
+class TokenField(Base):
+    token = Token
+    syllables_count = int
     is_to_simplify: bool
 
-    class Config:
-        arbitrary_types_allowed = True
 
-
-class AssessmentTextModel(BaseModel):
+class AssessmentTextModel(Base):
     initial_text: InitialText
     spacy_doc: Any
-    # tokenized_text: list[TokenField]
-    # initial_score: float
+    tokenized_text: list[TokenField]
+    initial_score: float
 
     @classmethod
     def store_doc(cls, doc: Doc):
@@ -36,12 +41,3 @@ class AssessmentTextModel(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-
-
-class SimplificationDoc(BaseModel):
-    assessment_model: AssessmentTextModel
-    result_score: Optional[float] = None
-
-    class Config:
-        arbitrary_types_allowed = True
-

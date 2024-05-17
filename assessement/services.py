@@ -1,10 +1,79 @@
 import os
 import sys
 import zipfile
+from typing import Any
 
 import gensim
+from spacy.lang.ru import Russian
 from ufal.udpipe import Model, Pipeline
 import wget
+
+from assessement.crud import create_assessment_model_item
+from assessement.models import InitialText, AssessmentTextModel
+
+nlp = Russian()
+nlp.add_pipe('sentencizer')
+
+
+class ComplexityAssessmentService:
+    def __init__(self, initial_text_model: InitialText, doc: Any):
+        self.initial_text_model = initial_text_model
+        self.doc = nlp(self.initial_text_model.text)
+
+    def _calculate_sentences(self):
+        return len([sent.text for sent in self.doc.sents])
+
+    def _calculate_words(self):
+        return len([token for token in self.doc if token.is_alpha])
+
+    @staticmethod
+    def count_syllables(word):
+        # Get vowel sounds in the word
+        last_letter = [*word][-1]
+        vowels = ["а", "у", "о", "и", "э", "ы", "е", "ё", "ю", "я"]
+        num_syllables = 0
+        prev_char = ''
+
+        for char in word:
+            if char.lower() in vowels and prev_char not in vowels:
+                num_syllables += 1
+            elif char == last_letter and char in vowels:
+                num_syllables += 1
+            prev_char = char
+        return num_syllables
+
+    def _calculate_syllables(self):
+        syllable_count = 0
+        for token in self.doc:
+            syllable_count += self.count_syllables(token.text)
+        return syllable_count
+
+    def _calculate_syllables(self):
+        dict = {
+
+            "syllables_count": None, # int
+            "is_to_simplify": None # bool
+        }
+        for token in self.doc:
+
+            syllable_count += self.count_syllables(token.text)
+        return syllable_count
+
+    def _calculate_complexity(self):
+        sentences = self._calculate_sentences()
+        words = self._calculate_words()
+        syllables = self._calculate_syllables()
+
+        # Calculate ASL (average sentence length)
+        ASL = words / sentences
+        # Calculate ASW (average number of syllables per word)
+        ASW = syllables / words
+
+        # Calculate complexity index
+        self.complexity_score = 206.835 - 1.52 * ASL - 65.14 * ASW
+
+        return self.complexity_score
+
 
 
 class ModelService:
