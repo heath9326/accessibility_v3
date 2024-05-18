@@ -10,6 +10,7 @@ from ufal.udpipe import Model, Pipeline
 from assessement.models import InitialText, AssessmentTextModel
 from assessement.schemas import InitialTextSchema
 from assessement.services import ComplexityAssessmentService
+from simplification.services import SimplificationService
 
 nlp = Russian()
 # filepath = Path(__file__).parent / "word2vec_model.bin"
@@ -41,29 +42,28 @@ initial_assessment_service = ComplexityAssessmentService(initial_text_model)
 complexity_assessment_data = initial_assessment_service.return_assessment_model_data()
 complexity_assessment_model = AssessmentTextModel(**complexity_assessment_data.model_dump())
 # TODO: in API create this model in DB
-for dict in complexity_assessment_model.tokens_data:
-    print(dict)
 
-
-def create_syllable_count_dict(tokenized_text=initial_assessment_service.doc):
-    return {token.text: initial_assessment_service.count_syllables(token.text) for token in tokenized_text if token.is_alpha}
-
-
-def filter_out_simple_words(text_dictionary: dict):
-    return [word for word, value in text_dictionary.items() if value > 4]
-    # words = []
-    # for word, value in text_dictionary.items():
-    #     if value > 4:
-    #         words.append(word)
-    # return words
+simplification_service = SimplificationService(complexity_assessment_model)
+print("Da")
+# def create_syllable_count_dict(tokenized_text=initial_assessment_service.doc):
+#     return {token.text: initial_assessment_service.count_syllables(token.text) for token in tokenized_text if token.is_alpha}
+#
+#
+# def filter_out_simple_words(text_dictionary: dict):
+#     return [word for word, value in text_dictionary.items() if value > 4]
+#     # words = []
+#     # for word, value in text_dictionary.items():
+#     #     if value > 4:
+#     #         words.append(word)
+#     # return words
 
 
 
 # Tokenize text
 # Vectorize text
 
-word_to_simplify_dict = create_syllable_count_dict()
-words_to_simplify_list = filter_out_simple_words(word_to_simplify_dict)
+# word_to_simplify_dict = create_syllable_count_dict()
+# words_to_simplify_list = filter_out_simple_words(word_to_simplify_dict)
 # def find_synonyms(target_word, topn=5):
 #     synonyms = []
 #
@@ -91,6 +91,8 @@ words_to_simplify_list = filter_out_simple_words(word_to_simplify_dict)
 
 # synonyms = wn.get_senses('государственного')[0].synset.hypernyms[0]
 # hand_tool = wn1.synsets('государственный')
+
+
 def process(pipeline, text=sample_text, keep_pos=True, keep_punct=False):
     entities = {'PROPN'}
     named = False
@@ -184,7 +186,7 @@ def tag_ud(words: list[str], modelfile='udpipe_syntagrus.model'):
     return tagged
 
 
-preprocessed_text = tag_ud(words=words_to_simplify_list)
+# preprocessed_text = tag_ud(words=words_to_simplify_list)
 # print(preprocessed_text[:350])
 
 
