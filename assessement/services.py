@@ -1,22 +1,21 @@
 import os
 import sys
 import zipfile
-from typing import Any
 
 import gensim
+import wget
 from spacy.lang.ru import Russian
 from ufal.udpipe import Model, Pipeline
-import wget
 
-from assessement.crud import create_assessment_model_item
-from assessement.models import InitialText, AssessmentTextModel
+from assessement.models import InitialText
+from assessement.schemas import TokenFieldSchema, AssessmentTextSchema
 
 nlp = Russian()
 nlp.add_pipe('sentencizer')
 
 
 class ComplexityAssessmentService:
-    def __init__(self, initial_text_model: InitialText, doc: Any):
+    def __init__(self, initial_text_model: InitialText):
         self.initial_text_model = initial_text_model
         self.doc = nlp(self.initial_text_model.text)
 
@@ -48,16 +47,19 @@ class ComplexityAssessmentService:
             syllable_count += self.count_syllables(token.text)
         return syllable_count
 
-    def _calculate_syllables(self):
-        dict = {
-
-            "syllables_count": None, # int
-            "is_to_simplify": None # bool
-        }
+    def _create_tokens_field(self):
+        token_fields: list[TokenFieldSchema] = []
         for token in self.doc:
-
-            syllable_count += self.count_syllables(token.text)
-        return syllable_count
+            syllables_count = self.count_syllables(token.text)
+            is_to_simplify = True if syllables_count > 4 else False
+            token_fields.append(
+                TokenFieldSchema(
+                    text=token.text,
+                    syllables_count=syllables_count,
+                    is_to_simplify=is_to_simplify
+                )
+            )
+        return token_fields
 
     def _calculate_complexity(self):
         sentences = self._calculate_sentences()
@@ -74,6 +76,15 @@ class ComplexityAssessmentService:
 
         return self.complexity_score
 
+    def return_assessment_model_data(self):
+        return (
+            AssessmentTextSchema(
+                initial_text_id=self.initial_text_model.id,
+                spacy_doc=self.doc.to_bytes(),
+                tokens=self._create_tokens_field(),
+                initial_score=self._calculate_complexity()
+            )
+        )
 
 
 class ModelService:

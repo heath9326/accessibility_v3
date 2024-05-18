@@ -1,17 +1,14 @@
-from spacy.lang.ru import Russian
-
-import gensim
-from pathlib import Path
-import zipfile
-from assessement.models import InitialText
-from spacy.tokens import Doc, Token
-
-from ufal.udpipe import Model, Pipeline
 import os
 import sys
-import wget
-import re
+from pathlib import Path
 
+import gensim
+import wget
+from spacy.lang.ru import Russian
+from ufal.udpipe import Model, Pipeline
+
+from assessement.models import InitialText, AssessmentTextModel
+from assessement.schemas import InitialTextSchema
 from assessement.services import ComplexityAssessmentService
 
 nlp = Russian()
@@ -36,8 +33,16 @@ sample_text = ("Как усыновить ребёнка. "
                 "После вступления решения суда в силу посетите ребёнка по месту его жительства и заберите домой. Возьмите с собой решение суда и паспорт."
                 "Зарегистрируйте усыновление.")
 
-initial_text_model = InitialText(text=sample_text)
+initial_text_data = InitialTextSchema(text=sample_text)
+initial_text_model = InitialText(**initial_text_data.model_dump())
+# TODO: in API create this model in DB
+
 initial_assessment_service = ComplexityAssessmentService(initial_text_model)
+complexity_assessment_data = initial_assessment_service.return_assessment_model_data()
+complexity_assessment_model = AssessmentTextModel(**complexity_assessment_data.model_dump())
+# TODO: in API create this model in DB
+for dict in complexity_assessment_model.tokens_data:
+    print(dict)
 
 
 def create_syllable_count_dict(tokenized_text=initial_assessment_service.doc):

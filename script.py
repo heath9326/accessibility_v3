@@ -1,16 +1,14 @@
-from spacy.lang.ru import Russian
-
-import gensim
-from pathlib import Path
-import zipfile
-from assessement.schemas import InitialText, AssessmentTextModel
-from spacy.tokens import Doc, Token
-
-from ufal.udpipe import Model, Pipeline
 import os
 import sys
+from pathlib import Path
+
+import gensim
 import wget
-import re
+from spacy.lang.ru import Russian
+from ufal.udpipe import Model, Pipeline
+
+from assessement.schemas import AssessmentTextSchema
+
 nlp = Russian()
 # filepath = Path(__file__).parent / "word2vec_model.bin"
 filepath = Path(__file__).parent / "212.zip"
@@ -33,27 +31,27 @@ sample_text = ("Как усыновить ребёнка. "
                 "После вступления решения суда в силу посетите ребёнка по месту его жительства и заберите домой. Возьмите с собой решение суда и паспорт."
                 "Зарегистрируйте усыновление.")
 
-initial_text_model = InitialText(text=sample_text)
-
-# class SpacyService:
+# initial_text_model = InitialText(text=sample_text)
 #
-#     def __init__(self):
-
-# Build pipes
-nlp.add_pipe('sentencizer')
-
-# Tokenize text
-doc = nlp(sample_text)
-
-assessment_model = AssessmentTextModel(initial_text=initial_text_model, spacy_doc=doc.to_bytes())
-# Calculate number of sentences
-# retrieved_doc = Doc(nlp.vocab).from_bytes(assessment_model.spacy_doc)
-# retrieved_doc_02 = assessment_model.retrieve_doc()
-
-sentences = len([sent.text for sent in doc.sents])
-
-# Calculate number of words
-words = len([token for token in doc if token.is_alpha])
+# # class SpacyService:
+# #
+# #     def __init__(self):
+#
+# # Build pipes
+# nlp.add_pipe('sentencizer')
+#
+# # Tokenize text
+# doc = nlp(sample_text)
+#
+# assessment_model = AssessmentTextSchema(initial_text=initial_text_model, spacy_doc=doc.to_bytes())
+# # Calculate number of sentences
+# # retrieved_doc = Doc(nlp.vocab).from_bytes(assessment_model.spacy_doc)
+# # retrieved_doc_02 = assessment_model.retrieve_doc()
+#
+# sentences = len([sent.text for sent in doc.sents])
+#
+# # Calculate number of words
+# words = len([token for token in doc if token.is_alpha])
 
 # Calculate number of syllables
 def count_syllables(word):
@@ -92,23 +90,26 @@ def filter_out_simple_words(text_dictionary: dict):
     # return words
 
 
-syllables = get_syllable_count()
-
-# Calculate ASL (average sentence length)
-ASL = words/sentences
-
-# Calculate ASW (average number of syllables per word)
-ASW = syllables/words
-
-# Calculate complexity index
-FRE = 206.835 - 1.52 * ASL - 65.14 * ASW
+# syllables = get_syllable_count()
+#
+# # Calculate ASL (average sentence length)
+# ASL = words/sentences
+#
+# # Calculate ASW (average number of syllables per word)
+# ASW = syllables/words
+#
+# # Calculate complexity index
+# FRE = 206.835 - 1.52 * ASL - 65.14 * ASW
 
 
 # Tokenize text
 # Vectorize text
 
-word_to_simplify_dict = create_syllable_count_dict()
-words_to_simplify_list = filter_out_simple_words(word_to_simplify_dict)
+
+# word_to_simplify_dict = create_syllable_count_dict()
+# words_to_simplify_list = filter_out_simple_words(word_to_simplify_dict)
+
+
 # def find_synonyms(target_word, topn=5):
 #     synonyms = []
 #

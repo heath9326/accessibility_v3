@@ -71,7 +71,7 @@ async def submit_form(request: Request):
 
 @app.post("/", response_model=schemas.InitialTextSchema)
 def create_initial_text(
-    initial_text: Annotated[str, Form()], db: Session = Depends(get_db)
+    initial_text: schemas.InitialTextSchema, db: Session = Depends(get_db)
 ):
     print(f"{initial_text}")
     return crud.create_initial_text_item(db=db, initial_text=initial_text)

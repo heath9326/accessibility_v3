@@ -9,4 +9,10 @@ engine = create_engine(
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# class Base:
+#     __allow_unmapped__ = True
+#
+#     # raises, but shouldn't (right?)
+#     id: int = Column(Integer, primary_key=True)
+
 Base = declarative_base()
