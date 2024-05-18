@@ -7,6 +7,7 @@ import wget
 from ufal.udpipe import Model, Pipeline
 
 from assessement.models import AssessmentTextModel
+from simplification.schemas import SimplificationTextSchema, TokenFieldExtendedSchema
 
 
 class ModelService:
@@ -28,6 +29,7 @@ class UdPipeModelService(ModelService):
             download_url='https://rusvectores.org/static/models/udpipe_syntagrus.model'
         )
         self.model = self._get_model()
+        self.process_pipeline = Pipeline(self.model, 'tokenize', Pipeline.DEFAULT, Pipeline.DEFAULT, 'conllu')
 
     def _get_model(self):
         full_path = os.path.join(self.filepath, self.filename)
@@ -41,7 +43,7 @@ class UdPipeModelService(ModelService):
 
         return model
 
-    def _process(self, pipeline, text: str, keep_pos=True, keep_punct=False):
+    def process(self, word: str, keep_pos=True, keep_punct=False):
         entities = {'PROPN'}
         named = False
         memory = []
@@ -50,7 +52,7 @@ class UdPipeModelService(ModelService):
         tagged_propn = []
 
         # обрабатываем текст, получаем результат в формате conllu:
-        processed = pipeline.process(text)
+        processed = self.process_pipeline.process(word)
 
         # пропускаем строки со служебной информацией:
         content = [l for l in processed.split('\n') if not l.startswith('#')]
@@ -110,17 +112,15 @@ class UdPipeModelService(ModelService):
     def _num_replace(self, token):
         pass
 
-    def process_text(self, words: list[str]):
-        process_pipeline = Pipeline(self.model, 'tokenize', Pipeline.DEFAULT, Pipeline.DEFAULT, 'conllu')
-
-        print('Processing input...', file=sys.stderr)
-        tagged = []
-        for word in words:
-            # line = unify_sym(line.strip()) # здесь могла бы быть ваша функция очистки текста
-            output = self._process(process_pipeline, text=word)
-            tagged_line = ' '.join(output)
-            tagged.append(tagged_line)
-        return tagged
+    # def process_text(self, words: list[str]):
+    #     print('Processing input...', file=sys.stderr)
+    #     tagged = []
+    #     for word in words:
+    #         # line = unify_sym(line.strip()) # здесь могла бы быть ваша функция очистки текста
+    #         output = self._process(process_pipeline, text=word)
+    #         tagged_line = ' '.join(output)
+    #         tagged.append(tagged_line)
+    #     return tagged
 
 
 class VectorModelService(ModelService):
@@ -177,9 +177,38 @@ class SimplificationService:
 
     def __init__(self, assessment_model: AssessmentTextModel):
         self.assessment_model = assessment_model
-        self.udpipe_model = UdPipeModelService().model
-        self.word2vec_model = VectorModelService().model
+        self.udpipe_model_service = UdPipeModelService()
+        self._create_tokens_field()
+        # self.word2vec_model = VectorModelService().model
         print("Da")
+
+    def _create_tokens_field(self):
+        token_fields: list[TokenFieldExtendedSchema] = []
+        for token_field in self.assessment_model.tokens:
+            token_fields.append(
+                TokenFieldExtendedSchema(
+                    text=token_field['text'],
+                    syllables_count=token_field['syllables_count'],
+                    is_to_simplify=token_field['is_to_simplify'],
+                    tag=self.udpipe_model_service.process(token_field['text'])[0],
+                    synonyms=None
+                )
+            )
+        return token_fields
+
+    def _create_simplified_text(self):
+        pass
+
+    def return_assessment_model_data(self):
+        return (
+            SimplificationTextSchema(
+                initial_text_id=self.assessment_model.initial_text_id,
+                spacy_doc=self.assessment_model.doc,
+                tokens=self._create_tokens_field(),
+                initial_score=self.assessment_model.initial_score,
+                simplified_text=self._create_simplified_text()
+            )
+        )
 
 
 
