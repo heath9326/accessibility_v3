@@ -4,8 +4,8 @@ from assessement.schemas import TokenFieldSchema, AssessmentTextSchema
 
 
 class TokenFieldExtendedSchema(TokenFieldSchema):
-    tag: Optional[str] = None
-    synonyms: Optional[list[str]] = None
+    tag: Optional[list[str]] = None
+    synonyms: Optional[list[tuple]] = None
 
     class Config:
         arbitrary_types_allowed = True

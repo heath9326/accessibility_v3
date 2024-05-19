@@ -7,6 +7,7 @@ import wget
 from ufal.udpipe import Model, Pipeline
 
 from assessement.models import AssessmentTextModel
+from assessement.utils import count_syllables
 from simplification.schemas import SimplificationTextSchema, TokenFieldExtendedSchema
 
 
@@ -159,12 +160,37 @@ class VectorModelService(ModelService):
                 # Увы!
                 print(word + ' is not present in the model')
 
-    def print_most_similar(self, preprocessed_word: str):
+    def filter_by_pos(self, token_tag: str, synonym: str):
+        token_pos = token_tag.split("_")[-1]
+        synonym_pos = synonym.split("_")[-1]
+        return True if token_pos == synonym_pos else False
+
+    def print_most_similar(self, token_tags: list):
+        if not token_tags:
+            return []
+
+        for token_tag in token_tags:
+            if token_tag not in self.model:
+                return []
         # выдаем 10 ближайших соседей слова:
-        for i in self.model.most_similar(positive=[preprocessed_word], topn=10):
+        synonyms: list[tuple] = []
+
+        for i in self.model.most_similar(positive=[token_tags[0]], topn=10):
+            antonyms = self.model.most_similar(negative=[token_tags[0]], topn=10)
             # слово + коэффициент косинусной близости
             print(f"Synonym found using most_similar() {i[0]}, {i[1]}")
-            self.print_synonyms_relative_cosine_similarity(preprocessed_word, i[0])
+            is_antonym = True if i[0] in antonyms else False
+            # TODO: Filter our synonyms
+            # Filter out by complexity
+            is_lower_complexity = True if count_syllables(i[0]) < 4 else False
+            # Filter our by part of speach
+            is_same_pos = self.filter_by_pos(token_tags[0], i[0])
+            # Filter out by closeness
+            is_close = True if i[1] > 0.6 else False
+            if is_same_pos and is_lower_complexity and is_close and not is_antonym:
+                synonyms.append((i[0], i[1]))
+            # self.print_synonyms_relative_cosine_similarity(preprocessed_word, i[0])
+        return synonyms
         print('\n')
 
     def print_synonyms_relative_cosine_similarity(self, preprocessed_word: str, synonym):
@@ -178,35 +204,48 @@ class SimplificationService:
     def __init__(self, assessment_model: AssessmentTextModel):
         self.assessment_model = assessment_model
         self.udpipe_model_service = UdPipeModelService()
-        self._create_tokens_field()
-        # self.word2vec_model = VectorModelService().model
-        print("Da")
+        self.word2vec_model_service = VectorModelService()
 
     def _create_tokens_field(self):
         token_fields: list[TokenFieldExtendedSchema] = []
         for token_field in self.assessment_model.tokens:
+            token_text = token_field['text']
+            token_tag = self.udpipe_model_service.process(token_field['text'])
             token_fields.append(
                 TokenFieldExtendedSchema(
-                    text=token_field['text'],
+                    text=token_text,
                     syllables_count=token_field['syllables_count'],
                     is_to_simplify=token_field['is_to_simplify'],
-                    tag=self.udpipe_model_service.process(token_field['text'])[0],
-                    synonyms=None
+                    tag=token_tag,
+                    synonyms=self.word2vec_model_service.print_most_similar(token_tag)
                 )
             )
         return token_fields
 
-    def _create_simplified_text(self):
-        pass
+    def _create_simplified_text(self, token_fields: list[TokenFieldExtendedSchema]):
+        text_list: list[str] = []
+        for token in token_fields:
+            if not token.is_to_simplify:
+                text_list.append(token.text)
+                continue
 
-    def return_assessment_model_data(self):
+            if not token.synonyms:
+                text_list.append(token.text)
+                continue
+
+            synonym = token.synonyms[0][0].split("_")[0]
+            text_list.append(synonym)
+        return " ".join(text_list)
+
+    def return_simplification_model_data(self):
+        token_fields = self._create_tokens_field()
         return (
             SimplificationTextSchema(
                 initial_text_id=self.assessment_model.initial_text_id,
-                spacy_doc=self.assessment_model.doc,
-                tokens=self._create_tokens_field(),
+                spacy_doc=self.assessment_model.spacy_doc,
+                tokens=token_fields,
                 initial_score=self.assessment_model.initial_score,
-                simplified_text=self._create_simplified_text()
+                simplified_text=self._create_simplified_text(token_fields)
             )
         )
 
