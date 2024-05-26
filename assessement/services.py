@@ -18,13 +18,13 @@ class ComplexityAssessmentService:
         else:
             self.doc = nlp(self.text_model.simplified_text)
 
-    def _calculate_sentences(self):
+    def calculate_sentences(self):
         return len([sent.text for sent in self.doc.sents])
 
-    def _calculate_words(self):
+    def calculate_words(self):
         return len([token for token in self.doc if token.is_alpha])
 
-    def _calculate_syllables(self):
+    def calculate_syllables(self):
         syllable_count = 0
         for token in self.doc:
             syllable_count += count_syllables(token.text)
@@ -45,9 +45,9 @@ class ComplexityAssessmentService:
         return token_fields
 
     def calculate_complexity(self):
-        sentences = self._calculate_sentences()
-        words = self._calculate_words()
-        syllables = self._calculate_syllables()
+        sentences = self.calculate_sentences()
+        words = self.calculate_words()
+        syllables = self.calculate_syllables()
 
         # Calculate ASL (average sentence length)
         ASL = words / sentences
@@ -56,7 +56,6 @@ class ComplexityAssessmentService:
 
         # Calculate complexity index
         self.complexity_score = 206.835 - 1.52 * ASL - 65.14 * ASW
-
         return self.complexity_score
 
     def return_assessment_model_data(self):

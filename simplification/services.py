@@ -178,7 +178,7 @@ class VectorModelService(ModelService):
         for i in self.model.most_similar(positive=[token_tags[0]], topn=10):
             antonyms = self.model.most_similar(negative=[token_tags[0]], topn=10)
             # слово + коэффициент косинусной близости
-            print(f"Synonym found using most_similar() {i[0]}, {i[1]}")
+            # print(f"Synonym found using most_similar() {i[0]}, {i[1]}")
             is_antonym = True if i[0] in antonyms else False
             # TODO: Filter our synonyms
             # Filter out by complexity
@@ -191,12 +191,12 @@ class VectorModelService(ModelService):
                 synonyms.append((i[0], i[1]))
             # self.print_synonyms_relative_cosine_similarity(preprocessed_word, i[0])
         return synonyms
-        print('\n')
+        # print('\n')
 
     def print_synonyms_relative_cosine_similarity(self, preprocessed_word: str, synonym):
         topn = 5  # Number of closest synonyms to retrieve
         similarity_index = self.model.relative_cosine_similarity(wa=preprocessed_word, wb=synonym, topn=topn)
-        print(f"Similarity index for {synonym}: {similarity_index}")
+        # print(f"Similarity index for {synonym}: {similarity_index}")
 
 
 class SimplificationService:
@@ -234,6 +234,7 @@ class SimplificationService:
                 continue
 
             synonym = token.synonyms[0][0].split("_")[0]
+            print(f"Word '{token.text}' was simplified into '{synonym}'")
             text_list.append(synonym)
         return " ".join(text_list)
 
