@@ -7,6 +7,7 @@ import wget
 from ufal.udpipe import Model, Pipeline
 
 from assessement.models import AssessmentTextModel
+from assessement.services import SpacyPipeService
 from assessement.utils import count_syllables
 from simplification.schemas import SimplificationTextSchema, TokenFieldExtendedSchema
 
@@ -155,7 +156,7 @@ class VectorModelService(ModelService):
             # есть ли слово в модели? Может быть, и нет
             if word in self.model:
                 print(word)
-                self.print_most_similar(word)
+                self.get_synonyms(word)
             else:
                 # Увы!
                 print(word + ' is not present in the model')
@@ -165,7 +166,35 @@ class VectorModelService(ModelService):
         synonym_pos = synonym.split("_")[-1]
         return True if token_pos == synonym_pos else False
 
-    def print_most_similar(self, token_tags: list):
+    def is_not_antonym(self, token_tag, synonym_tag):
+        antonyms = [antonym_tag for antonym_tag, closeness_index in self.model.most_similar(negative=[token_tag], topn=10)]
+        return False if synonym_tag in antonyms else True
+
+    def is_not_same_root(self, word1, word2):
+        try:
+            vector1 = self.model[word1]
+            vector2 = self.model[word2]
+
+            # Вычисление косинусного расстояния между векторами
+            similarity = self.model.similarity(word1, word2)
+
+            # Порог для схожести слов
+            threshold = 0.6
+            if similarity >= threshold:
+                return False
+            else:
+                return True
+
+        except KeyError as e:
+            print("Один или оба слова отсутствуют в словаре модели.")
+        return True
+
+    def is_lower_complexity(self, synonym_tag):
+        # TODO ВЫНЕСТИ В НАСТРОЙКИ
+        complexity_index = 4
+        return True if count_syllables(synonym_tag) < complexity_index else False
+
+    def get_synonyms(self, token_tags: list):
         if not token_tags:
             return []
 
@@ -175,20 +204,16 @@ class VectorModelService(ModelService):
         # выдаем 10 ближайших соседей слова:
         synonyms: list[tuple] = []
 
-        for i in self.model.most_similar(positive=[token_tags[0]], topn=10):
-            antonyms = self.model.most_similar(negative=[token_tags[0]], topn=10)
-            # слово + коэффициент косинусной близости
-            # print(f"Synonym found using most_similar() {i[0]}, {i[1]}")
-            is_antonym = True if i[0] in antonyms else False
-            # TODO: Filter our synonyms
-            # Filter out by complexity
-            is_lower_complexity = True if count_syllables(i[0]) < 4 else False
-            # Filter our by part of speach
-            is_same_pos = self.filter_by_pos(token_tags[0], i[0])
-            # Filter out by closeness
-            is_close = True if i[1] > 0.6 else False
-            if is_same_pos and is_lower_complexity and is_close and not is_antonym:
-                synonyms.append((i[0], i[1]))
+        token_tag = token_tags[0]
+        for synonym_tag, closeness_index in self.model.most_similar(positive=[token_tag], topn=10):
+            flags = {
+                "is_antonym": self.is_not_antonym(token_tag, synonym_tag),
+                "is_lower_complexity": self.is_lower_complexity(synonym_tag),
+                "is_same_pos": self.filter_by_pos(token_tag, synonym_tag),
+                "is_not_same_root": self.is_not_same_root(token_tag, synonym_tag)
+            }
+            if all(flags.values()):
+                synonyms.append((synonym_tag, closeness_index))
             # self.print_synonyms_relative_cosine_similarity(preprocessed_word, i[0])
         return synonyms
         # print('\n')
@@ -204,11 +229,14 @@ class SimplificationService:
     def __init__(self, assessment_model: AssessmentTextModel):
         self.assessment_model = assessment_model
         self.udpipe_model_service = UdPipeModelService()
+        self.spacy_pipe_service = SpacyPipeService()
         self.word2vec_model_service = VectorModelService()
+        self.doc = self.assessment_model.retrieve_doc()
 
     def _create_tokens_field(self):
+        token_list = [token for token in self.doc]
         token_fields: list[TokenFieldExtendedSchema] = []
-        for token_field in self.assessment_model.tokens:
+        for i, token_field in enumerate(self.assessment_model.tokens):
             token_text = token_field['text']
             token_tag = self.udpipe_model_service.process(token_field['text'])
             token_fields.append(
@@ -217,7 +245,7 @@ class SimplificationService:
                     syllables_count=token_field['syllables_count'],
                     is_to_simplify=token_field['is_to_simplify'],
                     tag=token_tag,
-                    synonyms=self.word2vec_model_service.print_most_similar(token_tag)
+                    synonyms=self.word2vec_model_service.get_synonyms(token_tag)
                 )
             )
         return token_fields

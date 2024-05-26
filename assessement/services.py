@@ -1,22 +1,59 @@
+import spacy
 from spacy.lang.ru import Russian
 
 from assessement.models import InitialText
 from assessement.schemas import TokenFieldSchema, AssessmentTextSchema
 from assessement.utils import count_syllables
 from simplification.models import SimplificationModel
+from spacy.tokens import Token
 
-nlp = Russian()
-nlp.add_pipe('sentencizer')
+
+class SpacyPipeService:
+    def __init__(self):
+        self.nlp = Russian()
+        # self.nlp = spacy.load('ru_core_news_sm')
+        self.nlp.add_pipe('sentencizer')
+
+    def process(self, token: Token, keep_pos=True, keep_punct=False):
+
+        entities = {'PROPN'}
+        named = False
+        memory = []
+        mem_case = None
+        mem_number = None
+        tagged_propn = []
+
+        lemma = token.lemma_
+        pos = token.pos_
+        if pos in entities:
+            if token.dep_ == 'compound':
+                pass
+            if token.ent_iob_ != 'O':
+                named = True
+                if not mem_case:
+                    mem_case = token._.case
+                    mem_number = token._.number
+                if token._.case == mem_case and token._.number == mem_number:
+                    tagged_propn.append(f'{lemma}_{pos}')
+            else:
+                if not named:
+                    tagged_propn.append(f'{lemma}_{pos}')
+
+        return tagged_propn
 
 
 class ComplexityAssessmentService:
     def __init__(self, text_model: InitialText | SimplificationModel):
-        self.text_model = text_model
+        self.spacy_pipe_service = SpacyPipeService()
 
+        self.text_model = text_model
         if isinstance(self.text_model, InitialText):
-            self.doc = nlp(self.text_model.text)
+            self.doc = self.spacy_pipe_service.nlp(self.text_model.text)
         else:
-            self.doc = nlp(self.text_model.simplified_text)
+            self.doc = self.spacy_pipe_service.nlp(self.text_model.simplified_text)
+
+        token_list = [token for token in self.doc]
+        print(token_list)
 
     def calculate_sentences(self):
         return len([sent.text for sent in self.doc.sents])
