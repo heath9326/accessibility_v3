@@ -2,9 +2,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "Awesome API"
-    admin_email: str
-    items_per_user: int = 50
+    text_complexity_index: int = 30
+    word_complexity_index: int = 4
 
 
 settings = Settings()

@@ -3,14 +3,16 @@ import sys
 import zipfile
 
 import gensim
+import pymorphy2
 import wget
 from ufal.udpipe import Model, Pipeline
 
 from assessement.models import AssessmentTextModel
 from assessement.services import SpacyPipeService
 from assessement.utils import count_syllables
+from config import settings
 from simplification.schemas import SimplificationTextSchema, TokenFieldExtendedSchema
-
+from gensim.models import KeyedVectors
 
 class ModelService:
     filename: str
@@ -171,28 +173,18 @@ class VectorModelService(ModelService):
         return False if synonym_tag in antonyms else True
 
     def is_not_same_root(self, word1, word2):
-        try:
-            vector1 = self.model[word1]
-            vector2 = self.model[word2]
+        # Вычисление косинусного расстояния между векторами
+        similarity = self.model.similarity(word1, word2)
 
-            # Вычисление косинусного расстояния между векторами
-            similarity = self.model.similarity(word1, word2)
-
-            # Порог для схожести слов
-            threshold = 0.6
-            if similarity >= threshold:
-                return False
-            else:
-                return True
-
-        except KeyError as e:
-            print("Один или оба слова отсутствуют в словаре модели.")
-        return True
+        # Порог для схожести слов
+        threshold = 0.6
+        if similarity >= threshold:
+            return False
+        else:
+            return True
 
     def is_lower_complexity(self, synonym_tag):
-        # TODO ВЫНЕСТИ В НАСТРОЙКИ
-        complexity_index = 4
-        return True if count_syllables(synonym_tag) < complexity_index else False
+        return True if count_syllables(synonym_tag) < settings.word_complexity_index else False
 
     def get_synonyms(self, token_tags: list):
         if not token_tags:
@@ -214,7 +206,6 @@ class VectorModelService(ModelService):
             }
             if all(flags.values()):
                 synonyms.append((synonym_tag, closeness_index))
-            # self.print_synonyms_relative_cosine_similarity(preprocessed_word, i[0])
         return synonyms
         # print('\n')
 
@@ -232,6 +223,7 @@ class SimplificationService:
         self.spacy_pipe_service = SpacyPipeService()
         self.word2vec_model_service = VectorModelService()
         self.doc = self.assessment_model.retrieve_doc()
+        self.morph = pymorphy2.MorphAnalyzer()
 
     def _create_tokens_field(self):
         token_list = [token for token in self.doc]
@@ -250,21 +242,59 @@ class SimplificationService:
             )
         return token_fields
 
+    def return_first_synonym(self, token_field: TokenFieldExtendedSchema):
+        return token_field.synonyms[0][0].split("_")[0]
+
+    def adjust_word_case(self, model_word: str, new_word: str):
+        # Определяем падеж слова word2
+        parsed_model_word = self.morph.parse(model_word)[0]
+        case_model_word = parsed_model_word.tag.case
+
+        # Преобразуем слово word1 в соответствии с падежом слова word2
+        parsed_new_word = self.morph.parse(new_word)[0]
+        inflected_new_word = parsed_new_word.inflect({case_model_word})
+        if inflected_new_word:
+            result = inflected_new_word.word
+        else:
+            result = model_word
+        return result
+
+    def adjust_word_plurality(self, model_word: str, new_word: str):
+        parsed_model_word = self.morph.parse(model_word)
+        is_plural = True if parsed_model_word.tag == 'plur' else False
+        is_singular = True if parsed_model_word.tag == 'sing'else False
+
+        parsed_word = self.morph.parse(new_word)[0]
+        if is_plural:
+            result = parsed_word.make_agree_with_number(2).word
+        if is_singular:
+            result = parsed_word.make_agree_with_number(1).word  # приводим к единственному числу
+        return result
+
+    def adjust_capitalization(self):
+        pass
+
+    def join_simplified_text(self):
+        pass
+
     def _create_simplified_text(self, token_fields: list[TokenFieldExtendedSchema]):
+        token_list: list[TokenFieldExtendedSchema] = []
         text_list: list[str] = []
-        for token in token_fields:
-            if not token.is_to_simplify:
-                text_list.append(token.text)
+        for i, token_field in enumerate(token_fields):
+            if not token_field.is_to_simplify:
+                token_list.append(self.doc.tokens[i])
+                text_list.append(self.doc.tokens[i])
                 continue
 
-            if not token.synonyms:
-                text_list.append(token.text)
+            if not token_field.synonyms:
+                token_list.append(self.doc.tokens[i])
                 continue
 
-            synonym = token.synonyms[0][0].split("_")[0]
-            print(f"Word '{token.text}' was simplified into '{synonym}'")
-            text_list.append(synonym)
-        return " ".join(text_list)
+            synonym = self.return_first_synonym(token_field)
+
+            print(f"Word '{token_field.text}' was simplified into '{synonym}'")
+            token_list.append(synonym)
+        return " ".join(token_list)
 
     def return_simplification_model_data(self):
         token_fields = self._create_tokens_field()
