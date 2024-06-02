@@ -1,28 +1,19 @@
-import json
-import os
-import sys
-from pathlib import Path
 import statistics
-import gensim
-import wget
-from spacy.lang.ru import Russian
-from ufal.udpipe import Model, Pipeline
-
+import time
 from assessement.models import InitialText, AssessmentTextModel
 from assessement.schemas import InitialTextSchema
 from assessement.services import ComplexityAssessmentService
-from simplification.models import SimplificationModel
-from simplification.services import SimplificationService
-
-# nlp = Russian()
-# # filepath = Path(__file__).parent / "word2vec_model.bin"
-# filepath = Path(__file__).parent / "212.zip"
-# # word2vec_model = KeyedVectors.load_word2vec_format("word2vec_model.bin.gz", binary=True, limit=1000000)
+from googletrans import Translator
 
 all_number_of_words = []
 all_number_of_sentences = []
 all_number_of_syllables = []
 all_complexity_scores = []
+
+all_final_number_of_words = []
+all_final_number_of_sentences = []
+all_final_number_of_syllables = []
+all_final_complexity_scores = []
 
 def load_texts():
     with open('dataset.txt', mode='r') as file:
@@ -33,12 +24,38 @@ def load_texts():
             texts.append(text_block)#
         return texts
 
-
 texts = load_texts()
+
+def translate_text(text, dest_lang='en'):
+    translator = Translator()
+    translated = translator.translate(text, dest=dest_lang)
+    return translated.text
+
+# Translate text from Russian to English
+russian_text = "Привет, как дела?"
+english_translation = translate_text(russian_text, dest_lang='en')
+print("Russian Text:", russian_text)
+print("English Translation:", english_translation)
+
+# Translate text from English back to Russian
+english_text = "Hello, how are you?"
+russian_translation = translate_text(english_text, dest_lang='ru')
+print("English Text:", english_text)
+print("Russian Translation:", russian_translation)
+
+
 for i, sample_text in enumerate(texts):
     print("\n")
+    print(f"Original Text: \n {sample_text}")
+    rus_to_eng_text = translate_text(sample_text, dest_lang='en')
+    time.sleep(5)
+    eng_to_rus_text = translate_text(rus_to_eng_text, dest_lang='ru')
+    print(f"Result Text: \n {eng_to_rus_text}")
+
+    print("\n")
+
     print(f"Processing sample text № {i}.")
-    initial_text_data = InitialTextSchema(text=sample_text)
+    initial_text_data = InitialTextSchema(text=eng_to_rus_text)
     initial_text_model = InitialText(**initial_text_data.model_dump())
     # TODO: in API create this model in DB
 
@@ -62,19 +79,6 @@ for i, sample_text in enumerate(texts):
     print(f"Initial Complexity score: {complexity}")
 
     complexity_assessment_model = AssessmentTextModel(**complexity_assessment_data.model_dump())
-    # TODO: in API create this model in DB
-
-    simplification_service = SimplificationService(complexity_assessment_model)
-    simplification_model_data = simplification_service.return_simplification_model_data()
-    simplification_model = SimplificationModel(**simplification_model_data.model_dump())
-    print("\n")
-    print(f"Simplified text of sample text # {i}:\n"
-          f"{simplification_model.simplified_text}")
-    # TODO: in API create this model in DB
-
-    final_complexity_score = ComplexityAssessmentService(simplification_model).calculate_complexity()
-    print("\n")
-    print(f"Final complexity score of sample text № {i}: {final_complexity_score}")
 print("\n")
 
 print("\n")

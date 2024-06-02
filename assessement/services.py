@@ -52,8 +52,9 @@ class ComplexityAssessmentService:
         else:
             self.doc = self.spacy_pipe_service.nlp(self.text_model.simplified_text)
 
-        token_list = [token for token in self.doc]
-        print(token_list)
+    @property
+    def token_list(self):
+        return [token for token in self.doc]
 
     def calculate_sentences(self):
         return len([sent.text for sent in self.doc.sents])

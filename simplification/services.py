@@ -13,6 +13,8 @@ from assessement.utils import count_syllables
 from config import settings
 from simplification.schemas import SimplificationTextSchema, TokenFieldExtendedSchema
 from gensim.models import KeyedVectors
+from spacy.tokens import Token
+
 
 class ModelService:
     filename: str
@@ -222,11 +224,29 @@ class SimplificationService:
         self.udpipe_model_service = UdPipeModelService()
         self.spacy_pipe_service = SpacyPipeService()
         self.word2vec_model_service = VectorModelService()
-        self.doc = self.assessment_model.retrieve_doc()
         self.morph = pymorphy2.MorphAnalyzer()
 
+    @property
+    def doc(self):
+        return self.assessment_model.retrieve_doc()
+
+    @property
+    def token_list(self):
+        return [token for token in self.doc]
+
+    @property
+    def synonym_pipeline(self):
+        return [
+            self._adjust_word_case,
+            self._adjust_word_plurality,
+            self._adjust_word_capitalization
+        ]
+
+    @property
+    def token_fields(self):
+        return self._create_tokens_field()
+
     def _create_tokens_field(self):
-        token_list = [token for token in self.doc]
         token_fields: list[TokenFieldExtendedSchema] = []
         for i, token_field in enumerate(self.assessment_model.tokens):
             token_text = token_field['text']
@@ -242,69 +262,98 @@ class SimplificationService:
             )
         return token_fields
 
-    def return_first_synonym(self, token_field: TokenFieldExtendedSchema):
+    def _return_first_synonym(self, token_field: TokenFieldExtendedSchema):
         return token_field.synonyms[0][0].split("_")[0]
 
-    def adjust_word_case(self, model_word: str, new_word: str):
+    def _adjust_word_case(self, model_token: Token, new_word: str):
         # Определяем падеж слова word2
-        parsed_model_word = self.morph.parse(model_word)[0]
+        parsed_model_word = self.morph.parse(model_token.text)[0]
         case_model_word = parsed_model_word.tag.case
 
         # Преобразуем слово word1 в соответствии с падежом слова word2
-        parsed_new_word = self.morph.parse(new_word)[0]
-        inflected_new_word = parsed_new_word.inflect({case_model_word})
-        if inflected_new_word:
-            result = inflected_new_word.word
-        else:
-            result = model_word
-        return result
+        try:
+            parsed_new_word = self.morph.parse(new_word)[0]
+            inflected_new_word = parsed_new_word.inflect({case_model_word})
+            if inflected_new_word:
+                result = inflected_new_word.word
+            else:
+                result = model_token.text
+            return result
 
-    def adjust_word_plurality(self, model_word: str, new_word: str):
-        parsed_model_word = self.morph.parse(model_word)
-        is_plural = True if parsed_model_word.tag == 'plur' else False
-        is_singular = True if parsed_model_word.tag == 'sing'else False
+        except:
+            return new_word
 
-        parsed_word = self.morph.parse(new_word)[0]
-        if is_plural:
-            result = parsed_word.make_agree_with_number(2).word
-        if is_singular:
-            result = parsed_word.make_agree_with_number(1).word  # приводим к единственному числу
-        return result
+    def _adjust_word_plurality(self, model_token: Token, new_word: str):
+        parsed_model_word = self.morph.parse(model_token.text)[0]
+        is_plural = True if parsed_model_word.tag.number == 'plur' else False
+        is_singular = True if parsed_model_word.tag.number == 'sing'else False
 
-    def adjust_capitalization(self):
-        pass
+        try:
+            parsed_word = self.morph.parse(new_word)[0]
+            if is_plural:
+                result = parsed_word.make_agree_with_number(2).word
+            if is_singular:
+                result = parsed_word.make_agree_with_number(1).word  # приводим к единственному числу
+            return result
 
-    def join_simplified_text(self):
-        pass
+        except:
+            return new_word
 
-    def _create_simplified_text(self, token_fields: list[TokenFieldExtendedSchema]):
-        token_list: list[TokenFieldExtendedSchema] = []
+    def _adjust_word_capitalization(self, model_token: Token, new_word: str):
+        is_capitalize = model_token.is_title
+
+        if is_capitalize:
+            return new_word.title()
+        return new_word
+
+    def _create_simplified_text(self):
+        simplified_text = []
+        text_list = self._create_text_list(self.token_fields)
+        for i, token in enumerate(self.token_list):
+            if token.is_alpha:
+                is_punc_next = self.token_list[i + 1].is_ascii
+                if token.is_title:
+                    if not text_list[i]:
+                        print("Bla")
+                    simplified_text.append(text_list[i] + " ")
+                else:
+                    if is_punc_next:
+                        simplified_text.append(text_list[i])
+                    else:
+                        simplified_text.append(text_list[i] + " ")
+            else:
+                simplified_text.append(text_list[i] + " ")
+        return "".join(simplified_text)
+
+    def _create_text_list(self, token_fields: list[TokenFieldExtendedSchema]):
         text_list: list[str] = []
         for i, token_field in enumerate(token_fields):
+            model_token = self.token_list[i]
+
             if not token_field.is_to_simplify:
-                token_list.append(self.doc.tokens[i])
-                text_list.append(self.doc.tokens[i])
+                text_list.append(token_field.text)
                 continue
 
             if not token_field.synonyms:
-                token_list.append(self.doc.tokens[i])
+                text_list.append(token_field.text)
                 continue
 
-            synonym = self.return_first_synonym(token_field)
+            processed_synonym = self._return_first_synonym(token_field)
+            for function in self.synonym_pipeline:
+                processed_synonym = function(model_token, processed_synonym)
 
-            print(f"Word '{token_field.text}' was simplified into '{synonym}'")
-            token_list.append(synonym)
-        return " ".join(token_list)
+            print(f"Word '{token_field.text}' was simplified into '{processed_synonym}'")
+            text_list.append(processed_synonym)
+        return text_list
 
     def return_simplification_model_data(self):
-        token_fields = self._create_tokens_field()
         return (
             SimplificationTextSchema(
                 initial_text_id=self.assessment_model.initial_text_id,
                 spacy_doc=self.assessment_model.spacy_doc,
-                tokens=token_fields,
+                tokens=self.token_fields,
                 initial_score=self.assessment_model.initial_score,
-                simplified_text=self._create_simplified_text(token_fields)
+                simplified_text=self._create_simplified_text()
             )
         )
 
