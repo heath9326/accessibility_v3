@@ -5,6 +5,7 @@ import zipfile
 import gensim
 import pymorphy2
 import wget
+from spacy.tokens import Token
 from ufal.udpipe import Model, Pipeline
 
 from assessement.models import AssessmentTextModel
@@ -12,8 +13,6 @@ from assessement.services import SpacyPipeService
 from assessement.utils import count_syllables
 from config import settings
 from simplification.schemas import SimplificationTextSchema, TokenFieldExtendedSchema
-from gensim.models import KeyedVectors
-from spacy.tokens import Token
 
 
 class ModelService:
