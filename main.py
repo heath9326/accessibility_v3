@@ -1,7 +1,6 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends
 from fastapi import Request, Form
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from assessement import crud, models
@@ -14,10 +13,7 @@ from config import logger, templates, app
 from simplification.models import SimplificationModel
 from simplification.services import SimplificationService
 
-
 models.Base.metadata.create_all(bind=engine)
-
-# Dependency
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -29,46 +25,36 @@ async def submit_form(request: Request):
 def create_initial_text(
     initial_text: str = Form(...), db: Session = Depends(get_db)
 ):
-    initial_test_instance = crud.create_initial_text_item(db=db, initial_text=initial_text)
-    processed_text = initial_test_instance
-
     logger.info("Processing sample text № {i}.")
-    initial_text_data = InitialTextSchema(text=sample_text)
-    initial_text_model = InitialText(**initial_text_data.model_dump())
+    initial_text_data = InitialTextSchema(text=initial_text)
+    initial_text_model = crud.create_model_instance(db=db, model_class=InitialText, model_schema=initial_text_data)
 
     initial_assessment_service = ComplexityAssessmentService(initial_text_model)
     complexity_assessment_data = initial_assessment_service.return_assessment_model_data()
+    complexity_assessment_model = crud.create_model_instance(
+        db=db, model_class=AssessmentTextModel, model_schema=complexity_assessment_data
+    )
+    return complexity_assessment_model
 
-    number_of_words = initial_assessment_service.calculate_words()
-    logger.info(f"Number of words: {number_of_words}")
 
-    number_of_sentences = initial_assessment_service.calculate_sentences()
-    logger.info(f"Number of sentences: {number_of_sentences}")
-
-    number_of_syllables = initial_assessment_service.calculate_syllables()
-    logger.info(f"Number of syllables: {number_of_syllables}")
-
-    complexity = initial_assessment_service.calculate_complexity()
-    logger.info(f"Initial Complexity score: {complexity}")
-
-    complexity_assessment_model = AssessmentTextModel(**complexity_assessment_data.model_dump())
+@app.post("/simplify", response_class=HTMLResponse)
+def create_initial_text(
+        complexity_assessment_model_id: int = Form(...), db: Session = Depends(get_db)
+):
+    complexity_assessment_model = crud.get_model_instance(
+        db=db, model_class=AssessmentTextModel, **{"id": complexity_assessment_model_id}
+    )
 
     simplification_service = SimplificationService(complexity_assessment_model)
     simplification_model_data = simplification_service.return_simplification_model_data()
-    simplification_model = SimplificationModel(**simplification_model_data.model_dump())
-
-    logger.info(f"Simplified text of sample text # {i}:\n"
-          f"{simplification_model.simplified_text}")
+    simplification_model = crud.create_model_instance(
+        db=db, model_class=SimplificationModel, model_schema=simplification_model_data
+    )
 
     final_assessment_service = ComplexityAssessmentService(simplification_model)
-    number_of_words = final_assessment_service.calculate_words()
-    logger.info(f"Final Number of words: {number_of_words}")
-
-    number_of_sentences = final_assessment_service.calculate_sentences()
-    logger.info(f"Final Number of sentences: {number_of_sentences}")
-
-    number_of_syllables = final_assessment_service.calculate_syllables()
-    logger.info(f"Final Number of syllables: {number_of_syllables}")
-
     final_complexity_score = final_assessment_service.calculate_complexity()
-    return {"initial_text": initial_text, "simplified_text": processed_text}
+    return {
+        "initial_complexity_score": simplification_model.initial_score,
+        "final_complexity_score": final_complexity_score,
+        "simplified_text": simplification_model.simplified_text
+    }
