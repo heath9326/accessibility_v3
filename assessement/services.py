@@ -46,7 +46,9 @@ class ComplexityAssessmentService:
     def __init__(self, text_model: InitialText | SimplificationModel):
         self.spacy_pipe_service = SpacyPipeService()
 
-        self.text_model = text_model
+        self.text_model, text_model_type = text_model, text_model
+
+
         if isinstance(self.text_model, InitialText):
             self.doc = self.spacy_pipe_service.nlp(self.text_model.text)
         else:

@@ -6,7 +6,7 @@ from spacy.tokens import Doc
 from sqlalchemy import Column, Integer, String, ForeignKey, LargeBinary, Float, Text
 from sqlalchemy.orm import relationship
 
-from . import Base
+from database import Base
 from .schemas import TokenFieldSchema
 
 nlp = Russian()

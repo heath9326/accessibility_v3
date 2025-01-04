@@ -2,8 +2,8 @@ from typing import Type
 
 from sqlalchemy.orm import Session
 
-from . import models, schemas
-from .database import SessionLocal
+from assessement import schemas
+from database import SessionLocal, Base
 
 
 def get_db():
@@ -14,7 +14,7 @@ def get_db():
         db.close()
 
 
-def create_model_instance(db: Session, model_class: Type[models.Model], model_schema: Type[schemas]):
+def create_model_instance(db: Session, model_class: Type[Base], model_schema: Type[schemas]):
     db_item = model_class(**model_schema.model_dump())
     db.add(db_item)
     db.commit()
@@ -22,7 +22,7 @@ def create_model_instance(db: Session, model_class: Type[models.Model], model_sc
     return db_item
 
 
-def get_model_instance(db: Session, model_class: Type[models.Model], **kwargs):
+def get_model_instance(db: Session, model_class: Type[Base], **kwargs):
     """
     Fetch a single InitialText item by its ID.
 

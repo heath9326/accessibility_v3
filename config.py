@@ -46,7 +46,7 @@ LOGGING_CONFIG = {
     },
 }
 
-app = FastAPI()
+
 templates = Jinja2Templates(directory="templates")
 logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger("my_app")
