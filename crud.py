@@ -2,7 +2,8 @@ from typing import Type
 
 from sqlalchemy.orm import Session
 
-from assessement import schemas
+import schemas
+from schemas import assessment
 from database import SessionLocal, Base
 
 

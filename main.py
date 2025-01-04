@@ -4,11 +4,11 @@ from fastapi.routing import APIRoute
 from routes.assessment import router as assessment_router
 from routes.simplification import router as simplification_router
 
-from assessement import models
+from models import assessment
 from database import engine
 
 app = FastAPI()
-models.Base.metadata.create_all(bind=engine)
+# models.Base.metadata.create_all(bind=engine)
 
 app.include_router(assessment_router)
 app.include_router(simplification_router)

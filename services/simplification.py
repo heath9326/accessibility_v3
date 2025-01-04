@@ -8,11 +8,11 @@ import wget
 from spacy.tokens import Token
 from ufal.udpipe import Model, Pipeline
 
-from assessement.models import AssessmentTextModel
-from assessement.services import SpacyPipeService
-from assessement.utils import count_syllables
+from models.assessment import AssessmentTextModel
+from services.assessment import SpacyPipeService
+from utils import count_syllables
 from config import settings
-from simplification.schemas import SimplificationTextSchema, TokenFieldExtendedSchema
+from schemas.simplification import SimplificationTextSchema, TokenFieldExtendedSchema
 
 
 class ModelService:

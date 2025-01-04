@@ -5,9 +5,9 @@ from starlette.responses import HTMLResponse
 
 import crud
 from crud import get_db
-from assessement.models import InitialText, AssessmentTextModel
-from assessement.schemas import InitialTextSchema
-from assessement.services import ComplexityAssessmentService
+from models.assessment import InitialText, AssessmentTextModel
+from schemas.assessment import InitialTextSchema
+from services.assessment import ComplexityAssessmentService
 from config import logger, templates
 from fastapi import Request
 

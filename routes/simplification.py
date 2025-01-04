@@ -4,11 +4,11 @@ from starlette.responses import HTMLResponse
 
 import crud
 from crud import get_db
-from assessement.models import AssessmentTextModel
-from assessement.services import ComplexityAssessmentService
+from models.assessment import AssessmentTextModel
+from services.assessment import ComplexityAssessmentService
 
-from simplification.models import SimplificationModel
-from simplification.services import SimplificationService
+from models.simplification import SimplificationModel
+from services.simplification import SimplificationService
 
 router = APIRouter()
 

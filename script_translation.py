@@ -1,8 +1,8 @@
 import statistics
 import time
-from assessement.models import InitialText, AssessmentTextModel
-from assessement.schemas import InitialTextSchema
-from assessement.services import ComplexityAssessmentService
+from models.assessment import InitialText, AssessmentTextModel
+from schemas.assessment import InitialTextSchema
+from services.assessment import ComplexityAssessmentService
 from googletrans import Translator
 
 all_number_of_words = []

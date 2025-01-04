@@ -1,10 +1,10 @@
 import statistics
 
-from assessement.models import InitialText, AssessmentTextModel
-from assessement.schemas import InitialTextSchema
-from assessement.services import ComplexityAssessmentService
-from simplification.models import SimplificationModel
-from simplification.services import SimplificationService
+from models.assessment import InitialText, AssessmentTextModel
+from schemas.assessment import InitialTextSchema
+from services.assessment import ComplexityAssessmentService
+from models.simplification import SimplificationModel
+from services.simplification import SimplificationService
 
 all_number_of_words = []
 all_number_of_sentences = []

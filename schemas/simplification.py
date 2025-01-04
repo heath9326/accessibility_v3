@@ -1,6 +1,6 @@
 from typing import Optional
 
-from assessement.schemas import TokenFieldSchema, AssessmentTextSchema
+from schemas.assessment import TokenFieldSchema, AssessmentTextSchema
 
 
 class TokenFieldExtendedSchema(TokenFieldSchema):

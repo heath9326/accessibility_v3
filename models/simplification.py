@@ -4,7 +4,7 @@ from sqlalchemy import ForeignKey, Column, Text
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column
 
-from assessement.models import AssessmentTextModel
+from models.assessment import AssessmentTextModel
 
 
 class SimplificationModel(AssessmentTextModel):

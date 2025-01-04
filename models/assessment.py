@@ -1,5 +1,4 @@
 import json
-from typing import Any
 
 from spacy.lang.ru import Russian
 from spacy.tokens import Doc
@@ -7,7 +6,6 @@ from sqlalchemy import Column, Integer, String, ForeignKey, LargeBinary, Float, 
 from sqlalchemy.orm import relationship
 
 from database import Base
-from .schemas import TokenFieldSchema
 
 nlp = Russian()
 

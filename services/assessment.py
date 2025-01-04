@@ -1,10 +1,9 @@
-import spacy
 from spacy.lang.ru import Russian
 
-from assessement.models import InitialText
-from assessement.schemas import TokenFieldSchema, AssessmentTextSchema
-from assessement.utils import count_syllables
-from simplification.models import SimplificationModel
+from models.assessment import InitialText
+from schemas.assessment import TokenFieldSchema, AssessmentTextSchema
+from utils import count_syllables
+from models.simplification import SimplificationModel
 from spacy.tokens import Token
 
 
