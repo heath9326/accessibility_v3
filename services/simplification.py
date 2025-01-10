@@ -29,8 +29,8 @@ class ModelService:
 class UdPipeModelService(ModelService):
     def __init__(self):
         super(UdPipeModelService, self).__init__(
-            filename='udpipe_syntagrus.model',
-            filepath=r'C:\Users\Евгения\PycharmProjects\models',
+            filename='',  # TODO: switch to dynamic submission by user
+            filepath=r'', # TODO: switch to dynamic submission by user
             download_url='https://rusvectores.org/static/models/udpipe_syntagrus.model'
         )
         self.model = self._get_model()
@@ -117,22 +117,13 @@ class UdPipeModelService(ModelService):
     def _num_replace(self, token):
         pass
 
-    # def process_text(self, words: list[str]):
-    #     print('Processing input...', file=sys.stderr)
-    #     tagged = []
-    #     for word in words:
-    #         # line = unify_sym(line.strip()) # здесь могла бы быть ваша функция очистки текста
-    #         output = self._process(process_pipeline, text=word)
-    #         tagged_line = ' '.join(output)
-    #         tagged.append(tagged_line)
-    #     return tagged
 
 
 class VectorModelService(ModelService):
     def __init__(self):
         super(VectorModelService, self).__init__(
-            filename='model.bin',
-            filepath=r'C:\Users\Евгения\PycharmProjects\models',
+            filename='', # TODO: switch to dynamic submission by user
+            filepath=r'', # TODO: switch to dynamic submission by user
             download_url='http://vectors.nlpl.eu/repository/20/180.zip'
         )
         self.model = self._get_model()
